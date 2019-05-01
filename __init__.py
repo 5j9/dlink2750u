@@ -76,6 +76,7 @@ class DLink2750U:
         return info
 
     def wireless_stations(self) -> List[Dict[str, str]]:
+        """Return authenticated wireless stations and their status."""
         self.load('wlstationlist.cmd')
         trs = select_all('tr')
         keys = [td.text for td in trs[0].find_elements_by_css_selector('td')]
@@ -84,7 +85,7 @@ class DLink2750U:
                 'td')])) for tr in trs[1:]]
 
     def reboot(self) -> None:
-        """Reboot the modem."""
+        """Reboot the router."""
         self.load('resetrouter.html')
         select_one('input').click()
 
