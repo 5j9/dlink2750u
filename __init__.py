@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 
 
 _SESSION_KEY = re_compile(r"sessionKey='?(\d*)", IGNORECASE).search
+_VARS = re_compile(r"var\s+(\w+)\s*=\s*'(.*?)';", IGNORECASE).findall
+
 
 Soup = partial(BeautifulSoup, features='lxml')
 
@@ -50,16 +52,21 @@ class DLink2750U:
                 key, value = row.find_all('td')
                 info[key.text[:-1]] = value.text
             except ValueError:  # len(td) == 1 or row is empty
-                td = row.find('td')
-                if td is None:
-                    continue
-                info[td.text[:-1]] = None
-
-        # todo: more device info can be gathered by evaluating the javascript
-        #       of the page
+                pass
+        variables = dict(_VARS(info_html))
+        if variables['dfltGw'] != '&nbsp':
+            info['Default Gateway'] = variables['dfltGw']
+        else:
+            info['Default Gateway'] = variables['dfltGwIfc']
         self._name = info['BoardID'] = search(
             r'<td>(DSL-[^<]*)</td>', info_html)[1]
         self._mac_address = info['MAC Address']
+        # todo:
+        #    Software Version
+        #    Bootloader (CFE) Version
+        #    DSL PHY and Driver Version
+        #    Wireless Driver Version
+        #    ... (See info.html)
         return info
 
     def wan_info(self) -> Dict[str, Dict[str, str]]:
