@@ -88,6 +88,28 @@ class DLink2750U:
             dict(zip(keys, [i.string for i in row.find_all('td')]))
             for row in rows[1:]]
 
+    def route_info(self):
+        """Device Info -- Route
+
+        Flags legend:
+            U: up
+            !: reject
+            G: gateway
+            H: host
+            R: reinstate
+            D: dynamic (redirect)
+            M: modified (redirect)
+        """
+        return self._first_row_table('rtroutecfg.cmd?action=view')
+
+    def arp(self) -> List[Dict[str, str]]:
+        """Return the ARP table."""
+        return self._first_row_table('arpview.cmd')
+
+    def dhcp(self) -> List[Dict[str, str]]:
+        """Return  Device Info -- DHCP Leases."""
+        return self._first_row_table('dhcpinfo.html')
+
     def wan_services(self):
         """Wide Area Network (WAN) Service Setup."""
         setup = self._first_row_table('wancfg.cmd')
@@ -98,14 +120,6 @@ class DLink2750U:
     def wireless_stations(self) -> List[Dict[str, str]]:
         """Return authenticated wireless stations and their status."""
         return self._first_row_table('wlstationlist.cmd')
-
-    def arp(self) -> List[Dict[str, str]]:
-        """Return the ARP table."""
-        return self._first_row_table('arpview.cmd')
-
-    def dhcp(self) -> List[Dict[str, str]]:
-        """Return  Device Info -- DHCP Leases."""
-        return self._first_row_table('dhcpinfo.html')
 
     def reboot(self) -> None:
         """Reboot the router."""
