@@ -1,14 +1,19 @@
-from functools import partial
-from re import search, compile as re_compile, IGNORECASE
+from atexit import register
 from typing import List, Dict, Optional
 
-from requests import Session
-from bs4 import BeautifulSoup
+from selenium.webdriver import Firefox, FirefoxOptions
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.expected_conditions import \
+    presence_of_element_located
 
-
-_SESSION_KEY = re_compile(r"sessionKey='?(\d*)", IGNORECASE).search
-
-Soup = partial(BeautifulSoup, features='lxml')
+firefox_options = FirefoxOptions()
+firefox_options.headless = True
+browser = Firefox(options=firefox_options)
+browser_get = browser.get
+select_all = browser.find_elements_by_css_selector
+select_one = browser.find_element_by_css_selector
+wait = WebDriverWait(browser, 30)
 
 
 class DLink2750U:
@@ -17,13 +22,14 @@ class DLink2750U:
 
     def __init__(self, ip_address: str, auth=('admin', 'admin')):
         self.ip_address = ip_address
-        self.url = f'http://{ip_address}/'
-        self.auth = auth
-        self.session = Session()
+        username, password = auth
+        url = f'http://{username}:{password}@{ip_address}/'
 
-    def get(self, path: str) -> str:
-        return self.session.request(
-            'GET', self.url + path, auth=self.auth).content.decode()
+        def load(path: str) -> None:
+            """Load path in browser."""
+            browser_get(url + path)
+
+        self.load = load
 
     @property
     def name(self) -> str:
@@ -41,55 +47,56 @@ class DLink2750U:
         return self._mac_address
 
     def device_info_summary(self) -> Dict[str, Optional[str]]:
-        info_html = self.get('info.html')
-        soup = Soup(info_html)
+        self.load('info.html')
 
         info = {}
-        for row in soup.find_all('tr'):
-            try:
-                key, value = row.find_all('td')
-                info[key.text[:-1]] = value.text
-            except ValueError:  # len(td) == 1 or row is empty
-                td = row.find('td')
-                if td is None:
-                    continue
-                info[td.text[:-1]] = None
+        for tr in select_all('tr'):
+            tds = tr.find_elements_by_css_selector('td')
+            if not tds:
+                continue
+            td1, td2 = tds
+            info[td1.text[:-1]] = td2.text
 
-        # todo: more device info can be gathered by evaluating the javascript
-        #       of the page
-        self._name = info['BoardID'] = search(
-            r'<td>(DSL-[^<]*)</td>', info_html)[1]
+        self._name = info['BoardID']
         self._mac_address = info['MAC Address']
         return info
 
     def wan_info(self) -> Dict[str, Dict[str, str]]:
         """Return a dict from interface name to interface info."""
-        rows = Soup(self.get('wancfg.cmd?action=view')).find('table').find_all(
-            'tr')
-        keys = [hd.text for hd in rows[0].find_all('td')[1:]]
+        self.load('wancfg.cmd?action=view')
+        trs = select_all('tr')
+        keys = [
+            td.text for td in trs[0].find_elements_by_css_selector('td')[1:]]
         info = {}
-        for row in rows[1:]:
-            tds = row.find_all('td')
+        for tr in trs[1:]:
+            tds = tr.find_elements_by_css_selector('td')
             info[tds[0].text] = {
                 k: tds[i].text for i, k in enumerate(keys, 1)}
         return info
 
     def wireless_stations(self) -> List[Dict[str, str]]:
-        rows = Soup(self.get('wlstationlist.cmd')).find_all('tr')
-        keys = [i.string for i in rows[0].find_all('td')]
-        return [
-            dict(zip(keys, [i.string for i in row.find_all('td')]))
-            for row in rows[1:]]
+        self.load('wlstationlist.cmd')
+        trs = select_all('tr')
+        keys = [td.text for td in trs[0].find_elements_by_css_selector('td')]
+        return [dict(zip(keys, [
+            td.text for td in tr.find_elements_by_css_selector(
+                'td')])) for tr in trs[1:]]
 
     def reboot(self) -> None:
         """Reboot the modem."""
-        self.get('rebootinfo.cgi?')
+        self.load('rebootinfo.cgi?')
 
     def ping(self, ip_address: str) -> str:
-        pingtrace_html = self.get('pingtrace.html')
-        ping_result = self.get(
-            'pingtrace.cmd'
-            '?action=ping'
-            f'&address={ip_address}'
-            f'&sessionKey={_SESSION_KEY(pingtrace_html)[1]}')
-        return Soup(ping_result).find('textarea').string
+        self.load('pingtrace.html')
+        select_one('[name=IPAddr]').send_keys(ip_address)
+        select_one('[value=Ping]').click()
+        textarea = wait.until(presence_of_element_located(
+            (By.CSS_SELECTOR, 'textarea')))
+        return textarea.text
+
+
+def at_exit():
+    browser.quit()
+
+
+register(at_exit)
