@@ -83,9 +83,9 @@ class DLink2750U:
 
     def _first_row_table(self, path: str) -> List[Dict[str, str]]:
         rows = Soup(self.get(path)).find_all('tr')
-        keys = [i.string for i in rows[0].find_all('td')]
+        keys = [i.text for i in rows[0].find_all('td')]
         return [
-            dict(zip(keys, [i.string for i in row.find_all('td')]))
+            dict(zip(keys, [i.get_text() for i in row.find_all('td')]))
             for row in rows[1:]]
 
     def route_info(self):
@@ -132,4 +132,4 @@ class DLink2750U:
             '?action=ping'
             f'&address={ip_address}'
             f'&sessionKey={_SESSION_KEY(pingtrace_html)[1]}')
-        return Soup(ping_result).find('textarea').string
+        return Soup(ping_result).find('textarea').text

@@ -1,7 +1,7 @@
 from unittest import main, TestCase
 from unittest.mock import patch, call
 
-from __init__ import DLink2750U
+from dlink2750u import DLink2750U
 from test_config import auth, ip_address
 
 
