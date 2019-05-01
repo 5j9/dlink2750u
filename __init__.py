@@ -3,7 +3,7 @@ from re import search, compile as re_compile, IGNORECASE
 from typing import List, Dict, Optional
 
 from requests import Session
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
 
 _SESSION_KEY = re_compile(r"sessionKey='?(\d*)", IGNORECASE).search
@@ -88,6 +88,13 @@ class DLink2750U:
             dict(zip(keys, [i.string for i in row.find_all('td')]))
             for row in rows[1:]]
 
+    def wan_services(self):
+        """Wide Area Network (WAN) Service Setup."""
+        setup = self._first_row_table('wancfg.cmd')
+        for i in setup:
+            del i['Remove'], i['Edit']
+        return setup
+
     def wireless_stations(self) -> List[Dict[str, str]]:
         """Return authenticated wireless stations and their status."""
         return self._first_row_table('wlstationlist.cmd')
@@ -95,6 +102,10 @@ class DLink2750U:
     def arp(self) -> List[Dict[str, str]]:
         """Return the ARP table."""
         return self._first_row_table('arpview.cmd')
+
+    def dhcp(self) -> List[Dict[str, str]]:
+        """Return  Device Info -- DHCP Leases."""
+        return self._first_row_table('dhcpinfo.html')
 
     def reboot(self) -> None:
         """Reboot the router."""
