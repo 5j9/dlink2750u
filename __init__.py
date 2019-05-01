@@ -5,7 +5,7 @@ from selenium.webdriver import Firefox, FirefoxOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.expected_conditions import \
-    presence_of_element_located
+    text_to_be_present_in_element_value
 
 firefox_options = FirefoxOptions()
 firefox_options.headless = True
@@ -19,6 +19,7 @@ wait = WebDriverWait(browser, 30)
 class DLink2750U:
 
     _name = _mac_address = None
+    browser = browser
 
     def __init__(self, ip_address: str, auth=('admin', 'admin')):
         self.ip_address = ip_address
@@ -84,15 +85,24 @@ class DLink2750U:
 
     def reboot(self) -> None:
         """Reboot the modem."""
-        self.load('rebootinfo.cgi?')
+        self.load('resetrouter.html')
+        select_one('input').click()
 
-    def ping(self, ip_address: str) -> str:
+    def _ping_trace(self, ip_address: str) -> None:
         self.load('pingtrace.html')
         select_one('[name=IPAddr]').send_keys(ip_address)
+
+    def ping(self, ip_address: str) -> str:
+        self._ping_trace(ip_address)
         select_one('[value=Ping]').click()
-        textarea = wait.until(presence_of_element_located(
-            (By.CSS_SELECTOR, 'textarea')))
-        return textarea.text
+        return select_one('textarea').text
+
+    def trace_route(self, ip_address: str) -> str:
+        self._ping_trace(ip_address)
+        select_one('[value="Trace Route"]').click()
+        wait.until(text_to_be_present_in_element_value(
+            (By.CSS_SELECTOR, 'textarea'), 'Trace complete.'))
+        return select_one('textarea').text
 
 
 def at_exit():
