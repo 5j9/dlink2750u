@@ -1,20 +1,17 @@
 from functools import partial
 from re import search, compile as re_compile, IGNORECASE
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 from requests import Session
 from bs4 import BeautifulSoup
 
-
 _SESSION_KEY = re_compile(rb"sessionKey='?(\d*)", IGNORECASE).search
 _VARS = re_compile(rb"var\s+(\w+)\s*=\s*'(.*?)';", IGNORECASE).findall
-
 
 Soup = partial(BeautifulSoup, features='lxml')
 
 
 class DLink2750U:
-
     _name = _mac_address = None
 
     def __init__(self, ip_address: str, auth=('admin', 'admin')):
@@ -23,7 +20,7 @@ class DLink2750U:
         self.auth = auth
         self.session = Session()
 
-    def get(self, path: str) -> bytes:
+    def get(self, path: Union[str, bytes]) -> bytes:
         return self.session.request(
             'GET', self.url + path, auth=self.auth).content
 
@@ -84,9 +81,8 @@ class DLink2750U:
     def _first_row_table(self, path: str) -> List[Dict[str, str]]:
         rows = Soup(self.get(path)).find_all('tr')
         keys = [i.text for i in rows[0].find_all('td')]
-        return [
-            dict(zip(keys, [i.get_text() for i in row.find_all('td')]))
-            for row in rows[1:]]
+        return [dict(zip(
+            keys, [i.text for i in row.find_all('td')])) for row in rows[1:]]
 
     def route_info(self):
         """Device Info -- Route
@@ -131,8 +127,29 @@ class DLink2750U:
             'pingtrace.cmd'
             '?action=ping'
             f'&address={ip_address}'
-            f'&sessionKey={_SESSION_KEY(pingtrace_html)[1].decode()}')
+            f'&sessionKey={skey(pingtrace_html)}')
         return Soup(ping_result).find('textarea').text
+
+    def trace_route(self, ip_address: str, timeout: int = 30) -> str:
+        from time import sleep, time
+        t0 = time()
+        html = self.get('pingtrace.html')
+        html = self.get(
+            'pingtrace.cmd'
+            '?action=trace'
+            '&start=1'
+            f'&address={ip_address}'
+            f'&sessionKey={skey(html)}')
+        while b'Trace complete.' not in html:
+            html = self.get(
+                'pingtrace.cmd'
+                '?action=trace'
+                '&start=2'
+                f'&sessionKey={skey(html)}')
+            sleep(1)
+            if time() - t0 > timeout:
+                raise TimeoutError
+        return Soup(html).find('textarea').text
 
     def backup(self, filename=None) -> Optional[bytes]:
         """Backup configurations of Broadband Router.
@@ -144,3 +161,7 @@ class DLink2750U:
             return backup
         with open(filename, 'bw') as f:
             f.write(backup)
+
+
+def skey(html: bytes) -> str:
+    return _SESSION_KEY(html)[1].decode()
