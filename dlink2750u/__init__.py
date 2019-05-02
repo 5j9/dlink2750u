@@ -6,8 +6,8 @@ from requests import Session
 from bs4 import BeautifulSoup
 
 
-_SESSION_KEY = re_compile(r"sessionKey='?(\d*)", IGNORECASE).search
-_VARS = re_compile(r"var\s+(\w+)\s*=\s*'(.*?)';", IGNORECASE).findall
+_SESSION_KEY = re_compile(rb"sessionKey='?(\d*)", IGNORECASE).search
+_VARS = re_compile(rb"var\s+(\w+)\s*=\s*'(.*?)';", IGNORECASE).findall
 
 
 Soup = partial(BeautifulSoup, features='lxml')
@@ -23,9 +23,9 @@ class DLink2750U:
         self.auth = auth
         self.session = Session()
 
-    def get(self, path: str) -> str:
+    def get(self, path: str) -> bytes:
         return self.session.request(
-            'GET', self.url + path, auth=self.auth).content.decode()
+            'GET', self.url + path, auth=self.auth).content
 
     @property
     def name(self) -> str:
@@ -54,12 +54,12 @@ class DLink2750U:
             except ValueError:  # len(td) == 1 or row is empty
                 pass
         variables = dict(_VARS(info_html))
-        if variables['dfltGw'] != '&nbsp':
-            info['Default Gateway'] = variables['dfltGw']
+        if variables[b'dfltGw'] != b'&nbsp':
+            info['Default Gateway'] = variables[b'dfltGw'].decode()
         else:
-            info['Default Gateway'] = variables['dfltGwIfc']
+            info['Default Gateway'] = variables[b'dfltGwIfc'].decode()
         self._name = info['BoardID'] = search(
-            r'<td>(DSL-[^<]*)</td>', info_html)[1]
+            rb'<td>(DSL-[^<]*)</td>', info_html)[1].decode()
         self._mac_address = info['MAC Address']
         # todo:
         #    Software Version
@@ -131,5 +131,16 @@ class DLink2750U:
             'pingtrace.cmd'
             '?action=ping'
             f'&address={ip_address}'
-            f'&sessionKey={_SESSION_KEY(pingtrace_html)[1]}')
+            f'&sessionKey={_SESSION_KEY(pingtrace_html)[1].decode()}')
         return Soup(ping_result).find('textarea').text
+
+    def backup(self, filename=None) -> Optional[bytes]:
+        """Backup configurations of Broadband Router.
+
+        Return backup as a string of bytes if filename is None.
+        """
+        backup = self.get('backupsettings.conf')
+        if filename is None:
+            return backup
+        with open(filename, 'bw') as f:
+            f.write(backup)

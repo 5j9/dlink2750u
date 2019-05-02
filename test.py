@@ -50,8 +50,8 @@ class DLink2750UTest(TestCase):
 
     def test_ping(self):
         with patch.object(modem, 'get', side_effect=[
-            "var sessionKey='12345678';",
-            "var sessionKey='12345678';<textarea>pingresult</textarea>"
+            b"var sessionKey='12345678';",
+            b"var sessionKey='12345678';<textarea>pingresult</textarea>"
         ]) as get_mock:
             self.assertEqual(modem.ping('1.1.1.1'), 'pingresult')
         self.assertEqual(get_mock.mock_calls, [
