@@ -1,6 +1,6 @@
 from functools import partial
 from re import search, compile as re_compile, IGNORECASE
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional
 
 from requests import Session
 from bs4 import BeautifulSoup
@@ -20,7 +20,7 @@ class DLink2750U:
         self.auth = auth
         self.session = Session()
 
-    def get(self, path: Union[str, bytes]) -> bytes:
+    def get(self, path: str) -> bytes:
         return self.session.request(
             'GET', self.url + path, auth=self.auth).content
 
