@@ -1,6 +1,7 @@
+
 from functools import partial
 from re import search, compile as re_compile, M
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Union
 
 from requests import Session
 from bs4 import BeautifulSoup
@@ -114,7 +115,9 @@ class DLink2750U:
             del i['Remove'], i['Edit']
         return setup
 
-    def ppp_wan_service_user_pass(self, service_id) -> Tuple[str, str]:
+    def ppp_wan_service_user_pass(
+        self, service_id: Union[str, int]
+    ) -> Tuple[str, str]:
         return self._user_pass_from_setup_edit(
             self._wan_service_setup_edit(service_id))
 
@@ -125,7 +128,7 @@ class DLink2750U:
             rb"\s*pppPassword.value = '(.*?)';\r?$", html, M).groups()
         return username.decode(), password.decode()
 
-    def _wan_service_setup_edit(self, service_id) -> bytes:
+    def _wan_service_setup_edit(self, service_id: Union[str, int]) -> bytes:
         # serviceId is always 1 for edit and 0 for add
         return self.get(
             f'wanL3Edit.cmd'
@@ -179,6 +182,13 @@ class DLink2750U:
             f'&enblIgmp={js_vars[b"enableIgmp"]}'
             f'&sessionKey={skey(setup_edit)}')
         self.get('wancfg.cmd?action=add&sessionKey=' + skey(wan_setup_summary))
+
+    def remove_wan_service(self, service: str):
+        self.get(
+            f'wancfg.cmd'
+            f'?action=remove'
+            f'&rmLst={service}'
+            f'&sessionKey={skey(self.get("wancfg.cmd"))}')
 
     def wireless_stations(self) -> List[Dict[str, str]]:
         """Return authenticated wireless stations and their status."""
