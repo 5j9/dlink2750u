@@ -138,53 +138,6 @@ class DLink2750U:
             f'&wanIfName=ppp{service_id}'
             f'&ntwkPrtcl=0')
 
-    def ppp_wan_service_reapply(self, service_id) -> None:
-        """Reapply wan service.
-
-        This method can be used as faster alternative to reboot for
-        trying to reconnect.
-        """
-        setup_edit = self._wan_service_setup_edit(service_id)
-        username, password = self._user_pass_from_setup_edit(setup_edit)
-        js_vars = variables(setup_edit)
-        path = (
-            'ntwksum2.cgi'
-            f'?pppUserName={username}'
-            f'&pppPassword={password}'
-            f'&enblOnDemand={js_vars[b"onDemand"]}'
-            f'&pppTimeOut={js_vars[b"timeOut"]}')
-        if js_vars[b'supportkeepalive'] == '1':
-            keep_alive_time = search(
-                rb"time\.value='(\d+)';", setup_edit)[1].decode()
-            path += (
-                f'&keepalive={js_vars[b"keepalive"]}'
-                f'&keepalivetime={keep_alive_time}')
-        alive_max_fail = search(
-            rb"maxfail\.value='(\d+)';", setup_edit)[1].decode()
-        ppp_server_name = search(
-            rb"pppServerName\.value\s*=\s*'(.*?)';", setup_edit)[1].decode()
-        wan_setup_summary = self.get(
-            path +
-            f'&alivemaxfail={alive_max_fail}'
-            f'&ManualPPPMTU={js_vars[b"pppManualmtu"]}'
-            f'&pppMTU={js_vars[b"pppMTUValue"]}'
-            f'&enblManualPpp={js_vars[b"buildManualPpp"]}'
-            f'&useStaticIpAddress={js_vars[b"enblIpAddr"]}'
-            f'&pppLocalIpAddress={js_vars[b"localIpAddr"]}'
-            f'&pppIpExtension={js_vars[b"ipExtension"]}'
-            f'&enblFirewall={js_vars[b"pppFirewall"]}'
-            f'&enblNat={js_vars[b"enblNatoption"]}'
-            f'&enblFullcone={js_vars[b"fullcone"]}'
-            f'&NatIpaddr={js_vars[b"NatIp"]}'
-            f'&pppAuthMethod={js_vars[b"authMethod"]}'
-            f'&pppServerName={ppp_server_name}'
-            f'&pppAuthErrorRetry={js_vars[b"pppAuthErrorRetry"]}'
-            f'&enblPppDebug={js_vars[b"pppDebug"]}'
-            f'&pppToBridge={js_vars[b"ppptobr"]}'
-            f'&enblIgmp={js_vars[b"enableIgmp"]}'
-            f'&sessionKey={skey(setup_edit)}')
-        self.get('wancfg.cmd?action=add&sessionKey=' + skey(wan_setup_summary))
-
     def remove_wan_service(self, service: str):
         self.get(
             f'wancfg.cmd'
