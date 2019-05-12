@@ -2,7 +2,7 @@ from unittest import main, TestCase
 from unittest.mock import patch, call
 
 from dlink2750u import DLink2750U
-from test_config import auth, ip_address
+from test.test_config import auth, ip_address
 
 
 modem = DLink2750U(ip_address, auth)
