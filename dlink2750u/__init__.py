@@ -207,6 +207,9 @@ class DLink2750U:
         with open(filename, 'bw') as f:
             f.write(backup)
 
+    def view_system_log(self) -> List[Dict[str, str]]:
+        return self._first_row_table('logview.cmd')
+
     def reboot(self) -> None:
         """Reboot the router."""
         self.get('rebootinfo.cgi?')
