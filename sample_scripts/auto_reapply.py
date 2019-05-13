@@ -1,17 +1,18 @@
 """Reapply ppp0 if there is no internet connection."""
 
 from functools import partial
+from pathlib import PurePath
 from socket import create_connection
 from sys import path
 from time import sleep, localtime
 
-path.append(__file__.rpartition('/')[0].rpartition('/')[0])
+path.insert(0, str(PurePath(__file__).parent.parent))
 from dlink2750u import DLink2750U, skey  # noqa: E402
 from test.test_config import ip_address, auth  # noqa: E402
 
 
 router = DLink2750U(ip_address=ip_address, auth=auth)
-connect = partial(create_connection, ('8.8.8.8', 53), 60)
+connect = partial(create_connection, ('8.8.8.8', 53), 30)
 
 ppp_user, ppp_pass = router.ppp_wan_service_user_pass('0')
 
@@ -58,7 +59,7 @@ if __name__ == '__main__':
         except OSError:
             left_retries -= 1
             if left_retries == 0:
-                event = 'reboot'
+                event = 'reapply'
                 reapply()
                 left_retries = 3
             else:
