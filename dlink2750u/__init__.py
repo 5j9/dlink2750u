@@ -1,7 +1,6 @@
 
 from functools import partial
 from re import search, compile as re_compile, M
-from logging import info, basicConfig, INFO
 from typing import List, Dict, Optional, Tuple, Union
 
 from requests import Session
@@ -24,7 +23,6 @@ class DLink2750U:
         self.session = Session()
 
     def get(self, path: str) -> bytes:
-        info(path)
         return self.session.request(
             'GET', self.url + path, auth=self.auth).content
 
@@ -202,6 +200,3 @@ def skey(html: bytes) -> str:
 
 def variables(html: bytes) -> Dict[bytes, str]:
     return {k: v.decode() for k, v in _VARS(html)}
-
-
-basicConfig(level=INFO)
